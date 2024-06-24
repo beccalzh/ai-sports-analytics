@@ -108,10 +108,10 @@ class ArticleContent:
                 elif id == '編輯':
                     pass
                 else:
-                    comment_data.append([push, id, text])   
+                    comment_data.append([push, id, text])  
+                last_commenter = id 
             except IndexError:
                 pass
-            last_commenter = id
         return comment_data
 
     def main(self):
@@ -132,7 +132,6 @@ class ArticleContent:
         comment_df['date'] = update_at
         db.insert_data('Comment', comment_df) # insert data into 'Comment' table
 
-#%%
 if __name__ == '__main__':
     target_board = {'basketballTW': 11, 
                     'baseball': 15, 
@@ -140,6 +139,5 @@ if __name__ == '__main__':
     for board in target_board:
         article_df = PTTArticle(board).main().head(target_board[board])
         for index, row in article_df.iterrows():
-            content = ArticleContent(row['href'], row['article_id']).main()
-            print(content)
+            ArticleContent(row['href'], row['article_id']).main()
         
