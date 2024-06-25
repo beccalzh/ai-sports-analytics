@@ -57,9 +57,12 @@ class SQLiteOperation(SQLiteConnectionSettings):
         self.conn.commit()
         print(f"Table {table_name} has been dropped successfully.")
 
-    def select_table(self, table_name:str):
-        return pd.read_sql_query(f"SELECT * from {table_name}", self.conn)
-    
+    def select_table(self, table_name:str, use_col:list=['*']):
+        return pd.read_sql_query(f"SELECT {','.join(use_col)} FROM {table_name}", self.conn)
+
+    def select_query(self, query:str):
+        return pd.read_sql_query(query, self.conn)
+
     def close_connection(self):
         self.cursor.close()
         self.conn.close()

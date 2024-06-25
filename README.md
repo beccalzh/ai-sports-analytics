@@ -31,7 +31,7 @@ To set up the project locally, follow these steps:
 1. **Clone the Repository:**
 
     ```bash
-    git clone https://github.com/yourusername/ai-sports-analytics.git
+    git clone https://github.com/beccalzh/ai-sports-analytics.git
     cd ai-sports-analytics
     ```
 
