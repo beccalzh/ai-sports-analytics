@@ -77,7 +77,7 @@ class PTTArticle:
         article_df = self.article_filter(article_data)
         article_df['article_id'] = [href.split('.')[1] for href in article_df['href']]
         article_df['board'] = self.board
-        article_df['date'] = datetime.today().strftime('%Y-%m-%d')
+        article_df['update_at'] = update_at
         db.insert_data('Overview', article_df) # insert data into database
         return article_df[['href', 'article_id']]
 
@@ -91,7 +91,17 @@ class ArticleContent:
         return meta_tag['content'].split(']')[1].strip()
 
     def get_article(self, all_content:list) -> str:
-        return ''.join([i for i in all_content[0].split('\n')[1:] if i != ''])
+        return''.join([i for i in all_content[0].split('\n')[1:] if i != ''])
+
+    def get_date(self, all_content:list) -> str:
+        match = re.search(r'\w{3} (\w{3}) (\d{2}) (\d{2}:\d{2}:\d{2}) (\d{4})', all_content[0])
+        if match:
+            date_str = f"{match.group(4)}-{match.group(1)}-{match.group(2)}"  # 格式化為 'YYYY-MMM-DD'
+            # 將月份的英文縮寫轉換為數字
+            date_obj = datetime.strptime(date_str, '%Y-%b-%d')
+            return date_obj.strftime('%Y-%m-%d')  # 轉換為 'YYYY-MM-DD' 格式
+        else:
+            return None
 
     def get_comment_info(self, all_content:list) -> list:
         comments = all_content[1].split('\n')[1:-1]
@@ -122,16 +132,18 @@ class ArticleContent:
         all_content = main_content.get_text().split(span_f2.get_text())
         title = self.get_title(soup)
         article = self.get_article(all_content)
+        date = self.get_date(all_content)
         comment_info = self.get_comment_info(all_content)
         db.insert_data('Article', pd.DataFrame([{'article_id': self.article_id,
                                                  'title': title,
                                                  'article': article,
-                                                 'date': update_at}])) # insert data into 'Article' table
+                                                 'date': date,
+                                                 'update_at': update_at}])) # insert data into 'Article' table
         comment_df = pd.DataFrame(comment_info, columns=['reaction', 'commenter', 'comment'])
         comment_df['article_id'] = self.article_id
-        comment_df['date'] = update_at
+        comment_df['update_at'] = update_at
         db.insert_data('Comment', comment_df) # insert data into 'Comment' table
-
+#%%
 if __name__ == '__main__':
     target_board = {'basketballTW': 11, 
                     'baseball': 15, 
@@ -141,3 +153,4 @@ if __name__ == '__main__':
         for index, row in article_df.iterrows():
             ArticleContent(row['href'], row['article_id']).main()
         
+# 1719061388
