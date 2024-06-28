@@ -7,6 +7,7 @@ from datetime import datetime
 import re
 db = database.SQLiteOperation()
 update_at = datetime.today().strftime('%Y-%m-%d')
+from log_decorator import log_decorator # log decorator
 
 class PTTArticle:
     def __init__(self, board:str):
@@ -72,6 +73,7 @@ class PTTArticle:
         article_df = article_df.sort_values('popularity', ascending=False).reset_index(drop=True)
         return article_df
 
+    @log_decorator
     def main(self) -> pd.DataFrame:
         article_data = self.collect_article_data()
         article_df = self.article_filter(article_data)
@@ -124,6 +126,7 @@ class ArticleContent:
                 pass
         return comment_data
 
+    @log_decorator
     def main(self):
         response = requests.get(self.url)
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -153,4 +156,3 @@ if __name__ == '__main__':
         for index, row in article_df.iterrows():
             ArticleContent(row['href'], row['article_id']).main()
         
-# 1719061388
