@@ -24,11 +24,11 @@ class SQLiteOperation(SQLiteConnectionSettings):
         columns = ', '.join(column_names)
         self.cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({columns})")
         self.conn.commit()
-        print(f"Table {table_name} has been created successfully.")
+        # print(f"Table {table_name} has been created successfully.")
 
     def insert_data(self, table_name:str, data:pd.DataFrame):
         data.to_sql(table_name, self.conn, if_exists='append', index=False)
-        print(f"Data has been inserted into {table_name} successfully.")
+        # print(f"Data has been inserted into {table_name} successfully.")
 
     def read_data(self, table_name:str, conditions:str=None) -> pd.DataFrame:
         if conditions:
@@ -40,22 +40,22 @@ class SQLiteOperation(SQLiteConnectionSettings):
     def update_data(self, table_name:str, conditions:str, new_data:str):
         self.cursor.execute(f"UPDATE {table_name} SET {new_data} WHERE {conditions}")
         self.conn.commit()
-        print(f"Data has been updated in {table_name} successfully.")
+        # print(f"Data has been updated in {table_name} successfully.")
 
     def delete_data(self, table_name:str, conditions:str):
         self.cursor.execute(f"DELETE FROM {table_name} WHERE {conditions}")
         self.conn.commit()
-        print(f"Data has been deleted from {table_name} successfully.")
+        # print(f"Data has been deleted from {table_name} successfully.")
 
     def truncate_table(self, table_name:str):
         self.cursor.execute(f"DELETE FROM {table_name}")
         self.conn.commit()
-        print(f"Data has been truncated from {table_name} successfully.")
+        # print(f"Data has been truncated from {table_name} successfully.")
 
     def drop_table(self, table_name:str):
         self.cursor.execute(f"DROP TABLE {table_name}")
         self.conn.commit()
-        print(f"Table {table_name} has been dropped successfully.")
+        # print(f"Table {table_name} has been dropped successfully.")
 
     def select_table(self, table_name:str, use_col:list=['*']):
         return pd.read_sql_query(f"SELECT {','.join(use_col)} FROM {table_name}", self.conn)
@@ -66,6 +66,6 @@ class SQLiteOperation(SQLiteConnectionSettings):
     def close_connection(self):
         self.cursor.close()
         self.conn.close()
-        print("Connection to SQLite database has been closed.")
+        # print("Connection to SQLite database has been closed.")
     
         
