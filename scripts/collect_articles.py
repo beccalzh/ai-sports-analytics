@@ -17,13 +17,14 @@ class PTTArticle:
         self.use_board = {'basketballTW': ['討論', '新聞', '情報', '乳摸'],
                           'baseball': ['分享', '新聞', '討論', '情報'],
                           'NBA': ['討論', '新聞', '情報', '花邊']}
-        
+    @log_decorator    
     def get_start_index(self) -> int:
         index_page = f'https://www.ptt.cc/bbs/{self.board}/index.html'
         response = requests.get(index_page)
         soup = BeautifulSoup(response.text, 'html.parser')
         return int(soup.find_all('a', 'btn wide')[1]['href'].split('index')[1].replace('.html', ''))+1
 
+    @log_decorator
     def get_popularity(self, article:BeautifulSoup) -> int:
         push = article.find('div', 'nrec').text
         if push == '':
@@ -37,21 +38,28 @@ class PTTArticle:
                 return -10*int(push[1])
         return int(push)
 
+    @log_decorator
     def get_headline(self, article:BeautifulSoup) -> str:
         if '刪除) <' in article.find('div', 'title').text.strip():
             return '[deleted] deleted'
         return article.find('div', 'title').text.strip()
 
+    @log_decorator
     def split_cate_reply(self, article:BeautifulSoup):
         title = self.get_headline(article).split(']')
+        pattern = r"\(已被(.+?)刪除\)"
+        if bool(re.search(pattern, title[-1])):
+            return 'deleted', False
         reply = False
         if 'Re:' in title[0]:
             reply = True
         return title[0].split('[')[1].lower(), reply
 
+    @log_decorator
     def get_href(self, article:BeautifulSoup) -> str:
         return article.a['href']
 
+    @log_decorator
     def collect_article_data(self) -> list: # list of html
         article_data = []
         for i in range(self.start_index, self.start_index-self.page_count, -1):
@@ -62,6 +70,7 @@ class PTTArticle:
             article_data.extend(link_data)
         return article_data
 
+    @log_decorator
     def article_filter(self, article_data:list) -> pd.DataFrame:
         article_df = pd.DataFrame()
         for article in article_data:
@@ -73,7 +82,6 @@ class PTTArticle:
         article_df = article_df.sort_values('popularity', ascending=False).reset_index(drop=True)
         return article_df
 
-    @log_decorator
     def main(self) -> pd.DataFrame:
         article_data = self.collect_article_data()
         article_df = self.article_filter(article_data)
@@ -88,13 +96,19 @@ class ArticleContent:
         self.url = f'https://www.ptt.cc{href}'
         self.article_id = article_id
 
+    @log_decorator
     def get_title(self, soup:BeautifulSoup) -> str:
-        meta_tag = soup.find('meta', {'property': 'og:title'})
-        return meta_tag['content'].split(']')[1].strip()
+        meta_content = soup.find('meta', {'property': 'og:title'})['content']
+        if ']' in meta_content:
+            return meta_content.split(']')[1].strip()
+        else:
+            return meta_content
 
+    @log_decorator
     def get_article(self, all_content:list) -> str:
         return''.join([i for i in all_content[0].split('\n')[1:] if i != ''])
 
+    @log_decorator
     def get_date(self, all_content:list) -> str:
         match = re.search(r'\w{3} (\w{3}) (\d{2}) (\d{2}:\d{2}:\d{2}) (\d{4})', all_content[0])
         if match:
@@ -105,6 +119,7 @@ class ArticleContent:
         else:
             return None
 
+    @log_decorator
     def get_comment_info(self, all_content:list) -> list:
         comments = all_content[1].split('\n')[1:-1]
         last_commenter = None
@@ -126,7 +141,7 @@ class ArticleContent:
                 pass
         return comment_data
 
-    @log_decorator
+    
     def main(self):
         response = requests.get(self.url)
         soup = BeautifulSoup(response.text, 'html.parser')
