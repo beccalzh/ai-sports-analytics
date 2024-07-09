@@ -1,5 +1,9 @@
+#%%
 import sqlite3
 import pandas as pd
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 class SQLiteConnectionSettings():
     """ connect to sqlite3 database """
@@ -9,7 +13,7 @@ class SQLiteConnectionSettings():
         """ use Singleton """
         if not cls._instance:
             cls._instance = super(SQLiteConnectionSettings, cls).__new__(cls)
-            cls._instance.conn = sqlite3.connect('../data.db', *args, **kwargs)
+            cls._instance.conn = sqlite3.connect(os.getenv('DB_DIR'), *args, **kwargs)
             cls._instance.cursor = cls._instance.conn.cursor()
         return cls._instance
 

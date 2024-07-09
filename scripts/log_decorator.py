@@ -2,9 +2,11 @@ import logging
 import functools
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # create log directory
-log_dir = '../log'
+log_dir = os.getenv('LOG_DIR')
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
