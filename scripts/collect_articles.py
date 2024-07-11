@@ -150,18 +150,18 @@ class ArticleContent:
         all_content = main_content.get_text().split(span_f2.get_text())
         title = self.get_title(soup)
         article = self.get_article(all_content)
-        date = self.get_date(all_content)
+        article_date = self.get_date(all_content)
         comment_info = self.get_comment_info(all_content)
         db.insert_data('Article', pd.DataFrame([{'article_id': self.article_id,
                                                  'title': title,
                                                  'article': article,
-                                                 'date': date,
+                                                 'date': article_date,
                                                  'update_at': update_at}])) # insert data into 'Article' table
         comment_df = pd.DataFrame(comment_info, columns=['reaction', 'commenter', 'comment'])
         comment_df['article_id'] = self.article_id
         comment_df['update_at'] = update_at
         db.insert_data('Comment', comment_df) # insert data into 'Comment' table
-#%%
+
 if __name__ == '__main__':
     target_board = {'basketballTW': 11, 
                     'baseball': 15, 
