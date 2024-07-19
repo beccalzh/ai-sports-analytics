@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 import database
 db = database.SQLiteOperation()
+import pandas as pd
 
 b4yesterday = (datetime.today() - timedelta(days=2)).strftime('%Y-%m-%d')   
 yesterday = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
@@ -18,17 +19,18 @@ class DataSelection:
         alldf = db.select_query(query)
         for board in alldf['board'].unique():
             res = alldf[(alldf['board'] == board)&(alldf['popularity'] > 0)]
-            for n in range(2):
+            for n in range(2): # do it twice to get rid of outliers
                 median = res.describe()['popularity']['50%']
                 res = res[res['popularity'] > median]
             board_cond[board] = res.describe()['popularity']['75%']
         return board_cond
 
     @staticmethod
-    def get_data(ndays:int, board:str, popularity:int) -> list:
+    def article_data(ndays:int, board:str, popularity:int) -> pd.DataFrame:
         date = (datetime.today() - timedelta(days=ndays)).strftime('%Y-%m-%d')
         query = f'''
-        SELECT * FROM Article
+        SELECT DISTINCT article_id, date, title, article 
+        FROM Article
         WHERE date BETWEEN '{date}' AND '{datetime.today().strftime('%Y-%m-%d')}' 
         AND article_id IN (
             SELECT article_id FROM Overview
@@ -37,12 +39,23 @@ class DataSelection:
         )
         ''' 
         return db.select_query(query)
+    
+    @staticmethod
+    def comment_data(article_ids:list) -> pd.DataFrame:
+        query = f'''
+        SELECT * FROM Comment
+        WHERE article_id IN {tuple(article_ids)}
+        '''
+        return db.select_query(query)
 
 def main():
     board_cond = DataSelection.board_cond()
     for board, popularity in board_cond.items():
-        data = DataSelection.get_data(3, board, popularity)
+        article_df = DataSelection.get_data(3, board, popularity)
+        commetn_df = DataSelection.get_comment_data(article_df['article_id'].to_list())
         # do something with data
+        ## summarize article
+        ## 
 
 
 # %%

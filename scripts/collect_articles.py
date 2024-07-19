@@ -48,9 +48,11 @@ class PTTArticle:
     def split_cate_reply(self, article:BeautifulSoup):
         title = self.get_headline(article).split(']')
         pattern = r"\(已被(.+?)刪除\)"
-        if bool(re.search(pattern, title[-1])):
-            return 'deleted', False
         reply = False
+        if bool(re.search(pattern, title[-1])):
+            return 'deleted', reply
+        elif len(title) == 1:
+            return None, reply
         if 'Re:' in title[0]:
             reply = True
         return title[0].split('[')[1].lower(), reply
@@ -132,7 +134,7 @@ class ArticleContent:
                 text = re.sub(r'\d{2}/\d{2} \d{2}:\d{2}', '', id_and_text[1]).strip()
                 if id == last_commenter:
                     comment_data[-1][2] += text 
-                elif id == '編輯':
+                elif (id == '編輯' or (id == '文章網址')):
                     pass
                 else:
                     comment_data.append([push, id, text])  
@@ -161,7 +163,7 @@ class ArticleContent:
         comment_df['article_id'] = self.article_id
         comment_df['update_at'] = update_at
         db.insert_data('Comment', comment_df) # insert data into 'Comment' table
-
+#%%
 if __name__ == '__main__':
     target_board = {'basketballTW': 11, 
                     'baseball': 15, 
