@@ -100,11 +100,13 @@ class ArticleContent:
 
     @log_decorator
     def get_title(self, soup:BeautifulSoup) -> str:
-        meta_content = soup.find('meta', {'property': 'og:title'})['content']
-        if ']' in meta_content:
-            return meta_content.split(']')[1].strip()
+        meta_content = soup.find('meta', {'property': 'og:title'})
+        if meta_content == None:
+            return None
+        elif ']' in meta_content['content']:
+            return meta_content['content'].split(']')[1].strip()
         else:
-            return meta_content
+            return None
 
     @log_decorator
     def get_article(self, all_content:list) -> str:

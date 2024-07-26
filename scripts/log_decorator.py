@@ -28,5 +28,6 @@ def log_decorator(func):
             return result
         except Exception as e:
             logging.error(f"Error in {func.__name__}: {e}")
+            logging.error(f"Arguments: {args}, {kwargs}")
             raise  # raise error for debugging
     return wrapper

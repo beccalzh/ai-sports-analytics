@@ -48,14 +48,21 @@ class DataSelection:
         '''
         return db.select_query(query)
 
+class CommentAnalysis:
+    def __init__(self, comment_list:list):
+        self.comment_list = comment_list
+    def tmp():
+        pass
+
+#%%
 def main():
     board_cond = DataSelection.board_cond()
     for board, popularity in board_cond.items():
-        article_df = DataSelection.get_data(3, board, popularity)
-        commetn_df = DataSelection.get_comment_data(article_df['article_id'].to_list())
+        article_df = DataSelection.article_data(3, board, popularity)
+        comment_df = DataSelection.comment_data(article_df['article_id'].to_list())
         # do something with data
         ## summarize article
-        ## 
+        ## keyword extracted from comments
 
 
 # %%
