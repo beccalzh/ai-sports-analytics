@@ -43,16 +43,45 @@ class DataSelection:
     @staticmethod
     def comment_data(article_ids:list) -> pd.DataFrame:
         query = f'''
-        SELECT * FROM Comment
+        SELECT article_id, reaction, comment 
+        FROM Comment
         WHERE article_id IN {tuple(article_ids)}
         '''
         return db.select_query(query)
 
+#%%
+from ckip_transformers.nlp import CkipNerChunker
+from collections import Counter
+
 class CommentAnalysis:
     def __init__(self, comment_list:list):
         self.comment_list = comment_list
-    def tmp():
-        pass
+        self.ner_driver = CkipNerChunker(model="bert-base")
+        self.unwanted = ['CARDINAL', 'DATE', 'NORP']
+    
+    def get_entity(self) -> list:
+        if self.comment_list == ['']:
+            return []
+        ner_sentence_list = self.ner_driver(self.comment_list, use_delim=True, batch_size=256, max_length=128)
+        entity_out = [list(i) for i in ner_sentence_list if len(i) != 0]
+        return entity_out
+
+    def sort_entity(self, entity_list:list) -> dict:
+        result = {}
+        for t in entity_list:
+            for j in t:
+                if j.ner in result:
+                    result[j.ner].append(j.word)
+                elif j.ner in self.unwanted:
+                    continue
+                else:
+                    result[j.ner] = [j.word]
+        return {k:Counter(v) for k, v in result.items()}
+
+    def main(self):
+        entity_list = self.get_entity()
+        return self.sort_entity(entity_list)
+
 
 #%%
 def main():
