@@ -4,9 +4,9 @@ import database
 db = database.SQLiteOperation()
 import pandas as pd
 
-b4yesterday = (datetime.today() - timedelta(days=2)).strftime('%Y-%m-%d')   
-yesterday = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
-board = 'basketballTW'
+# b4yesterday = (datetime.today() - timedelta(days=2)).strftime('%Y-%m-%d')   
+# yesterday = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+board = 'basketballTW' # for testing
 
 class DataSelection:
     def __init__(self):
@@ -49,7 +49,6 @@ class DataSelection:
         '''
         return db.select_query(query)
 
-#%%
 from ckip_transformers.nlp import CkipNerChunker
 from collections import Counter
 
@@ -60,11 +59,16 @@ class CommentAnalysis:
         self.unwanted = ['CARDINAL', 'DATE', 'NORP']
     
     def get_entity(self) -> list:
-        if self.comment_list == ['']:
-            return []
         ner_sentence_list = self.ner_driver(self.comment_list, use_delim=True, batch_size=256, max_length=128)
-        entity_out = [list(i) for i in ner_sentence_list if len(i) != 0]
-        return entity_out
+        # entity_out = [list(i) for i in ner_sentence_list if len(i) != 0]
+        whole_entity = []
+        each_entity = []
+        for i in ner_sentence_list:
+            if i != []:
+                whole_res = [j.word for j in i if j.ner not in self.unwanted]
+                whole_entity.extend(whole_res)
+            each_entity.append([j.word for j in i])
+        return whole_entity, each_entity # list with all entities, each element is a list of entities in a sentence
 
     def sort_entity(self, entity_list:list) -> dict:
         result = {}
@@ -78,6 +82,18 @@ class CommentAnalysis:
                     result[j.ner] = [j.word]
         return {k:Counter(v) for k, v in result.items()}
 
+    def sort_entity(self, entity_list:list) -> dict:
+        result = {}
+        for t in entity_list:
+            for j in t:
+                if j.ner in result:
+                    result[j.ner].append(j.word)
+                elif j.ner in self.unwanted:
+                    continue
+                else:
+                    result[j.ner] = [j.word]
+        return {k:Counter(v) for k, v in result.items()}
+        
     def main(self):
         entity_list = self.get_entity()
         return self.sort_entity(entity_list)
@@ -85,13 +101,13 @@ class CommentAnalysis:
 
 #%%
 def main():
-    board_cond = DataSelection.board_cond()
+    board_cond = DataSelection.board_cond() # {board(str): popularity(float)}
     for board, popularity in board_cond.items():
-        article_df = DataSelection.article_data(3, board, popularity)
+        article_df = DataSelection.article_data(1, board, popularity)
         comment_df = DataSelection.comment_data(article_df['article_id'].to_list())
-        # do something with data
         ## summarize article
         ## keyword extracted from comments
+
 
 
 # %%
