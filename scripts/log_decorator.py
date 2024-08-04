@@ -15,7 +15,7 @@ today = datetime.today().strftime('%m%d')
 log_filename = os.path.join(log_dir, f'{today}.log')
 
 # set logging
-logging.basicConfig(filename=log_filename, level=logging.ERROR, 
+logging.basicConfig(filename=log_filename, level=logging.INFO, 
                     format='[%(asctime)s] %(levelname)s: %(message)s')
 
 def log_decorator(func):
@@ -23,8 +23,13 @@ def log_decorator(func):
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        start_time = datetime.now()
+        logging.info(f"Function {func.__name__} started at {start_time}")
         try:
             result = func(*args, **kwargs)
+            end_time = datetime.now()
+            logging.info(f"Function {func.__name__} ended at {end_time}")
+            logging.info(f"Function {func.__name__} executed in {end_time - start_time}")
             return result
         except Exception as e:
             logging.error(f"Error in {func.__name__}: {e}")
