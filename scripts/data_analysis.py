@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 import database
 db = database.SQLiteOperation()
 import pandas as pd
+from ckip_transformers.nlp import CkipNerChunker
+import numpy as np
 
-# b4yesterday = (datetime.today() - timedelta(days=2)).strftime('%Y-%m-%d')   
-# yesterday = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
 board = 'basketballTW' # for testing
 
 class DataSelection:
@@ -29,13 +29,13 @@ class DataSelection:
     def article_data(ndays:int, board:str, popularity:int) -> pd.DataFrame:
         date = (datetime.today() - timedelta(days=ndays)).strftime('%Y-%m-%d')
         query = f'''
-        SELECT DISTINCT article_id, date, title, article 
+        SELECT article_id, date, title, article 
         FROM Article
-        WHERE date BETWEEN '{date}' AND '{datetime.today().strftime('%Y-%m-%d')}' 
-        AND article_id IN (
+        WHERE article_id IN (
             SELECT article_id FROM Overview
             WHERE board = '{board}'
             AND popularity >= {popularity}
+            AND update_at BETWEEN '{date}' AND '{datetime.today().strftime('%Y-%m-%d')}'
         )
         ''' 
         return db.select_query(query)
@@ -49,65 +49,46 @@ class DataSelection:
         '''
         return db.select_query(query)
 
-from ckip_transformers.nlp import CkipNerChunker
-from collections import Counter
-
 class CommentAnalysis:
     def __init__(self, comment_list:list):
         self.comment_list = comment_list
         self.ner_driver = CkipNerChunker(model="bert-base")
         self.unwanted = ['CARDINAL', 'DATE', 'NORP']
     
+    def combine_dict(self, d1:dict, d2:dict) -> dict:
+        out = {}
+        for key in set(d1) | set(d2):
+            out[key] = d1.get(key, []) + d2.get(key, [])
+        return out
+
     def get_entity(self) -> list:
         ner_sentence_list = self.ner_driver(self.comment_list, use_delim=True, batch_size=256, max_length=128)
-        # entity_out = [list(i) for i in ner_sentence_list if len(i) != 0]
-        whole_entity = []
-        each_entity = []
-        for i in ner_sentence_list:
-            if i != []:
-                whole_res = [j.word for j in i if j.ner not in self.unwanted]
-                whole_entity.extend(whole_res)
-            each_entity.append([j.word for j in i])
-        return whole_entity, each_entity # list with all entities, each element is a list of entities in a sentence
-
-    def sort_entity(self, entity_list:list) -> dict:
-        result = {}
-        for t in entity_list:
-            for j in t:
-                if j.ner in result:
-                    result[j.ner].append(j.word)
-                elif j.ner in self.unwanted:
-                    continue
-                else:
-                    result[j.ner] = [j.word]
-        return {k:Counter(v) for k, v in result.items()}
-
-    def sort_entity(self, entity_list:list) -> dict:
-        result = {}
-        for t in entity_list:
-            for j in t:
-                if j.ner in result:
-                    result[j.ner].append(j.word)
-                elif j.ner in self.unwanted:
-                    continue
-                else:
-                    result[j.ner] = [j.word]
-        return {k:Counter(v) for k, v in result.items()}
+        entity_out = {}
+        for sentence, ner in zip(self.comment_list, ner_sentence_list):
+            res = {j.word:[sentence] for j in ner if j.ner not in self.unwanted}
+            entity_out = self.combine_dict(entity_out, res)
+        return entity_out
+    
+    def keyword_selection(self, entity_dict:dict) -> dict:
+        lengths = [len(v) for v in entity_dict.values()]        
+        pr95_length = np.percentile(lengths, 95)        
+        pr95_dict = {k: v for k, v in entity_dict.items() if len(v) >= pr95_length}
+        return pr95_dict
         
-    def main(self):
-        entity_list = self.get_entity()
-        return self.sort_entity(entity_list)
-
+    def main(self) -> list:
+        entity_out = self.get_entity()
+        pr95_dict = self.keyword_selection(entity_out)
+        return list(pr95_dict.keys()), list(pr95_dict.values())
 
 #%%
-def main():
+def main() -> pd.DataFrame:
     board_cond = DataSelection.board_cond() # {board(str): popularity(float)}
     for board, popularity in board_cond.items():
         article_df = DataSelection.article_data(1, board, popularity)
-        comment_df = DataSelection.comment_data(article_df['article_id'].to_list())
-        ## summarize article
-        ## keyword extracted from comments
-
-
-
-# %%
+        comment_df = DataSelection.comment_data(article_df['article_id'].to_list())  
+        for aid in comment_df['article_id'].unique():
+            res_article = article_df[article_df['article_id'] == aid]
+            ## summarize article
+            ## similarity search
+            res_comment = comment_df[comment_df['article_id'] == aid]
+            pr95_key, pr95_val = CommentAnalysis(res_comment['comment'].to_list()).main() ## keyword extracted from comments

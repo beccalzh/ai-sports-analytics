@@ -165,8 +165,8 @@ class ArticleContent:
         comment_df['article_id'] = self.article_id
         comment_df['update_at'] = update_at
         db.insert_data('Comment', comment_df) # insert data into 'Comment' table
-#%%
-if __name__ == '__main__':
+
+def main():
     target_board = {'basketballTW': 11, 
                     'baseball': 15, 
                     'NBA': 30}
