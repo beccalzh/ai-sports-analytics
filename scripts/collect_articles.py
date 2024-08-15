@@ -1,13 +1,12 @@
-#%%
 import requests
-import database
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
 import re
+from utils import database
+from utils.log_decorator import log_decorator # log decorator
 db = database.SQLiteOperation()
 update_at = datetime.today().strftime('%Y-%m-%d')
-from log_decorator import log_decorator # log decorator
 
 class PTTArticle:
     def __init__(self, board:str):
@@ -175,3 +174,6 @@ def main():
         for index, row in article_df.iterrows():
             ArticleContent(row['href'], row['article_id']).main()
         
+
+if __name__ == '__main__':
+    main()  
