@@ -1,23 +1,21 @@
 from datetime import datetime, timedelta
 import sys
 sys.path.append('../utils')
-import scripts.database as database
-db = database.SQLiteOperation()
+import database
+import comment_analysis
 import pandas as pd
 import sys
-import comment_analysis
 
 board = 'basketballTW' # for testing
 
 class DataSelection:
     def __init__(self):
-        pass
-    
-    @staticmethod
-    def board_cond() -> dict:
+        self. db = database.SQLiteOperation()
+
+    def board_cond(self) -> dict:
         board_cond = {}
         query = 'SELECT * FROM Overview'
-        alldf = db.select_query(query)
+        alldf = self.db.select_query(query)
         for board in alldf['board'].unique():
             res = alldf[(alldf['board'] == board)&(alldf['popularity'] > 0)]
             for n in range(2): # do it twice to get rid of outliers
@@ -26,10 +24,8 @@ class DataSelection:
             board_cond[board] = res.describe()['popularity']['75%']
         return board_cond
 
-    @staticmethod
-    def article_data(ndays:int, board:str, popularity:int) -> pd.DataFrame:
-        date = (datetime.today() - timedelta(days=ndays)).strftime('%Y-%m-%d')
-        query = f'''
+    def article_query(self, date: str, board: str, popularity: int) -> str:
+        return f'''
         SELECT article_id, date, title, article 
         FROM Article
         WHERE article_id IN (
@@ -38,17 +34,28 @@ class DataSelection:
             AND popularity >= {popularity}
             AND update_at BETWEEN '{date}' AND '{datetime.today().strftime('%Y-%m-%d')}'
         )
-        ''' 
-        return db.select_query(query)
+        '''
+
+    def article_data(self, ndays: int, board: str, popularity: int) -> pd.DataFrame:
+        date = (datetime.today() - timedelta(days=ndays)).strftime('%Y-%m-%d')
+        query = self.article_query(date, board, popularity)
+        article_df = self.db.select_query(query)
+
+        # if the query returns nothing, try the previous day
+        while len(article_df) == 0:
+            ndays += 1
+            date = (datetime.today() - timedelta(days=ndays)).strftime('%Y-%m-%d')
+            query = self.article_query(date, board, popularity)
+            article_df = self.db.select_query(query)
+        return article_df
     
-    @staticmethod
-    def comment_data(article_ids:list) -> pd.DataFrame:
+    def comment_data(self, article_ids:list) -> pd.DataFrame:
         query = f'''
-        SELECT article_id, reaction, comment 
+        SELECT article_id, comment 
         FROM Comment
         WHERE article_id IN {tuple(article_ids)}
         '''
-        return db.select_query(query)
+        return self.db.select_query(query)
 
 
 def main() -> pd.DataFrame:
@@ -60,5 +67,6 @@ def main() -> pd.DataFrame:
             res_article = article_df[article_df['article_id'] == aid]
             ## summarize article
             ## similarity search
-            res_comment = comment_df[comment_df['article_id'] == aid]
+            comment_list = comment_df[comment_df['article_id'] == aid]['comment'].to_list()
+            comment_out = comment_analysis.CommentChunker(comment_list).main()
             # input to comment_analysis.py `res_comment['comment'].to_list()`
