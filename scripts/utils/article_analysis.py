@@ -7,8 +7,6 @@ import chromadb
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 from dotenv import load_dotenv
 load_dotenv('../../.env')
-
-#%%
 import os
 
 client = chromadb.PersistentClient(
@@ -40,3 +38,44 @@ for i, d in enumerate(documents):
 
 #%%
 client.delete_collection('test')
+#%%
+import ollama
+import chromadb
+from chromadb.config import Settings
+from dotenv import load_dotenv
+load_dotenv('../../.env')
+import os
+import pandas as pd
+
+client = chromadb.PersistentClient(
+  path=os.getenv('CHROMA_DIR'),
+  settings=Settings(),
+  )
+collection = client.get_collection(name="articles")
+
+# metadata = {'board':'NBA'}
+class DataRetrieval:
+  def __init__(self, collection):
+    self.collection = collection
+
+  def query_data(self, metadata:dict, title:str):
+    response = ollama.embeddings(
+      model="mxbai-embed-large", 
+      prompt=title)
+    results = self.collection.query(
+      query_embedding=[response['embedding']],
+      n_results=5,
+      metadata=metadata
+    )
+    return results['documents']
+
+  def save_data(self, metadata:dict, )
+
+  def main(self, board:str, article_df:pd.DataFrame):
+    metadata = {'board':board}
+    for index, row in article_df.iterrows():
+      title = row['title']
+      results = self.query_data(metadata, title)
+
+
+

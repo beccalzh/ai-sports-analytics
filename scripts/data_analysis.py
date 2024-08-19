@@ -4,13 +4,12 @@ sys.path.append('../utils')
 import database
 import comment_analysis
 import pandas as pd
-import sys
 
 board = 'basketballTW' # for testing
 
 class DataSelection:
     def __init__(self):
-        self. db = database.SQLiteOperation()
+        self.db = database.SQLiteOperation()
 
     def board_cond(self) -> dict:
         board_cond = {}
