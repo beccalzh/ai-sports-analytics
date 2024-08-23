@@ -1,8 +1,5 @@
 from datetime import datetime, timedelta
-import sys
-sys.path.append('../utils')
-import database
-import comment_analysis
+from utils import database, comment_analysis, article_analysis
 import pandas as pd
 
 board = 'basketballTW' # for testing
@@ -64,8 +61,10 @@ def main() -> pd.DataFrame:
         comment_df = DataSelection.comment_data(article_df['article_id'].to_list())  
         for aid in comment_df['article_id'].unique():
             res_article = article_df[article_df['article_id'] == aid]
-            ## summarize article
             ## similarity search
+            similar_articles = article_analysis.DataRetrieval().main(board, res_article)
+            ## summarize article
+            ## keyword extraction
             comment_list = comment_df[comment_df['article_id'] == aid]['comment'].to_list()
             comment_out = comment_analysis.CommentChunker(comment_list).main()
             # input to comment_analysis.py `res_comment['comment'].to_list()`

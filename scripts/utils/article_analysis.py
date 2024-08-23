@@ -2,7 +2,6 @@
 ## do vector search on article v
 ## save article to vectorDB v
 ## summarize article
-#%%
 
 import ollama
 import chromadb
