@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 load_dotenv('../../.env')
 import os
 import pandas as pd
+from utils import database
 
 class DataRetrieval:
   def __init__(self):
@@ -19,7 +20,17 @@ class DataRetrieval:
       )
     self.collection = client.get_collection(name="articles")
 
-  def query_data(self, metadata:dict, title:str) -> list:
+  def get_href(self, article_ids:list) -> dict:
+    db = database.SQLiteOperation()
+    query = f'''
+    SELECT article_id, href 
+    FROM Overview
+    WHERE article_id IN {tuple(article_ids)}
+    '''
+    href_df = db.select_query(query).drop_duplicates()
+    return href_df.set_index('article_id')['href'].to_dict()
+
+  def query_data(self, metadata:dict, title:str) -> dict:
     response = ollama.embeddings(
       model = "mxbai-embed-large", 
       prompt = title)
@@ -28,33 +39,23 @@ class DataRetrieval:
       n_results = 5,
       where = metadata
     )
-    return results['documents']
+    href_dict = self.get_href(results['ids'])
+    return {doc:href_dict[_id] for _id, doc in zip(results['ids'], results['documents'])}
 
-  def save_data(self, metadata:dict, row:pd.Series):
-    response = ollama.embeddings(model="mxbai-embed-large", prompt=row['title'])
+  def save_data(self, metadata:dict, article_dict:dict):
+    response = ollama.embeddings(model="mxbai-embed-large", prompt=article_dict['title'])
     self.collection.add(
-      ids = [row['article_id']],
+      ids = [article_dict['article_id']],
       embeddings = [response["embedding"]],
-      documents = [row['title']],
+      documents = [article_dict['title']],
       metadatas = metadata
     )
 
-  def main(self, board:str, article_df:pd.DataFrame):
-    metadata = {'board':board}
-    out = {}
-    """ for testing use only """
-    import json 
-    from datetime import datetime
-    """ for testing use only """
-    for _, row in article_df.iterrows():
-      title = row['title']
-      if title != None:
-        results = self.query_data(metadata, title) # find similar articles
-        # out[row['article_id']] = results
-        """ for testing use only """
-        out[title] = results
-        json.dump(out, open(f"article_analysis/{datetime.today().strftime('%Y-%m-%d')}.json","w"))
-        """ for testing use only """
-        self.save_data(metadata, row)
-        return out
+  def main(self, board:str, article_dict:dict) -> dict:
+    metadata = {'board':board}  
+    title = article_dict['title']
+    if title != None:
+      results = self.query_data(metadata, title) # find similar articles
+      # self.save_data(metadata, article_dict) # save article to vectorDB
+      return {article_dict['article_id']: results}
 
