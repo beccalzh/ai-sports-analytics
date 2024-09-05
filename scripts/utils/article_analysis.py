@@ -14,11 +14,13 @@ from utils import database
 
 class DataRetrieval:
   def __init__(self):
-    client = chromadb.PersistentClient(
+    self.client = chromadb.PersistentClient(
       path=os.getenv('CHROMA_DIR'),
       settings=Settings(),
       )
-    self.collection = client.get_collection(name="articles")
+
+  def get_collection(self, board:str):
+    return self.client.get_or_create_collection(board)
 
   def get_href(self, article_ids:list) -> dict:
     db = database.SQLiteOperation()
@@ -30,32 +32,31 @@ class DataRetrieval:
     href_df = db.select_query(query).drop_duplicates()
     return href_df.set_index('article_id')['href'].to_dict()
 
-  def query_data(self, metadata:dict, title:str) -> dict:
+  def query_data(self, collection, title:str) -> dict:
     response = ollama.embeddings(
       model = "mxbai-embed-large", 
       prompt = title)
-    results = self.collection.query(
+    results = collection.query(
       query_embeddings = [response['embedding']],
-      n_results = 5,
-      where = metadata
+      n_results = 5
     )
-    href_dict = self.get_href(results['ids'])
-    return {doc:href_dict[_id] for _id, doc in zip(results['ids'], results['documents'])}
+    href_dict = self.get_href(results['ids'][0])
+    return {doc:href_dict[_id] for _id, doc in zip(results['ids'][0], results['documents'][0])}
 
-  def save_data(self, metadata:dict, article_dict:dict):
-    response = ollama.embeddings(model="mxbai-embed-large", prompt=article_dict['title'])
-    self.collection.add(
-      ids = [article_dict['article_id']],
-      embeddings = [response["embedding"]],
-      documents = [article_dict['title']],
-      metadatas = metadata
-    )
+  def save_data(self, collection, article_dict:dict):
+    if article_dict['title'] != None:
+      response = ollama.embeddings(model="mxbai-embed-large", prompt=article_dict['title'])
+      collection.add(
+        ids = [article_dict['article_id']],
+        embeddings = [response["embedding"]],
+        documents = [article_dict['title']],
+      )
 
   def main(self, board:str, article_dict:dict) -> dict:
-    metadata = {'board':board}  
+    collection = self.get_collection(board)
     title = article_dict['title']
     if title != None:
-      results = self.query_data(metadata, title) # find similar articles
-      # self.save_data(metadata, article_dict) # save article to vectorDB
+      results = self.query_data(collection, title) # find similar articles
+      # self.save_data(collection, article_dict) # save article to vectorDB
       return {article_dict['article_id']: results}
 

@@ -4,7 +4,6 @@ from utils import database, comment_analysis, article_analysis
 import pandas as pd
 import json
 
-board = 'basketballTW' # for testing
 
 class DataSelection:
     def __init__(self):
@@ -72,5 +71,7 @@ def main():
             comment_list = comment_df[comment_df['article_id'] == aid]['comment'].to_list()
             comment_out = comment_analysis.CommentChunker(comment_list).main()
             # input to comment_analysis.py `res_comment['comment'].to_list()`
+
+
 
 # %%
