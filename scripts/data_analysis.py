@@ -1,14 +1,15 @@
 #%%
 from datetime import datetime, timedelta
 from utils import database, comment_analysis, article_analysis
+from utils.log_decorator import log_decorator # log decorator
 import pandas as pd
-import json
 
 
 class DataSelection:
     def __init__(self):
         self.db = database.SQLiteOperation()
 
+    @log_decorator
     def board_cond(self) -> dict:
         board_cond = {}
         query = 'SELECT * FROM Overview'
@@ -21,6 +22,7 @@ class DataSelection:
             board_cond[board] = res.describe()['popularity']['75%']
         return board_cond
 
+    @log_decorator
     def article_query(self, date: str, board: str, popularity: int) -> str:
         return f'''
         SELECT article_id, title, article 
@@ -33,7 +35,8 @@ class DataSelection:
         )
         ORDER BY date DESC
         '''
-
+    
+    @log_decorator
     def article_data(self, ndays: int, board: str, popularity: int) -> pd.DataFrame:
         date = (datetime.today() - timedelta(days=ndays)).strftime('%Y-%m-%d')
         query = self.article_query(date, board, popularity)
@@ -47,6 +50,7 @@ class DataSelection:
             article_df = self.db.select_query(query)
         return article_df.drop_duplicates()
     
+    @log_decorator
     def comment_data(self, article_ids:list) -> pd.DataFrame:
         query = f'''
         SELECT article_id, comment 
@@ -54,14 +58,12 @@ class DataSelection:
         WHERE article_id IN {tuple(article_ids)}
         '''
         return self.db.select_query(query).drop_duplicates()
-
-
-def main():
-    ds = DataSelection()
-    board_cond = ds.board_cond() # {board(str): popularity(float)}
-    for board, popularity in board_cond.items():
-        article_df = ds.article_data(1, board, popularity)
-        comment_df = ds.comment_data(article_df['article_id'].to_list())  
+    
+    @log_decorator
+    def main(self, board:str, popularity:int) -> dict:
+        board_out = {}
+        article_df = self.article_data(1, board, popularity)
+        comment_df = self.comment_data(article_df['article_id'].to_list())  
         for aid in comment_df['article_id'].unique():
             res_article = article_df[article_df['article_id'] == aid].to_dict(orient='records')[0]
             ## similarity search
@@ -71,7 +73,14 @@ def main():
             comment_list = comment_df[comment_df['article_id'] == aid]['comment'].to_list()
             comment_out = comment_analysis.CommentChunker(comment_list).main()
             # input to comment_analysis.py `res_comment['comment'].to_list()`
+            board_out[aid] = {'similar_articles': similar_articles, 'comment_out': comment_out}
+        return board_out
 
-
-
+def main() -> dict:
+    ds = DataSelection()
+    board_cond = ds.board_cond() # {board(str): popularity(float)}
+    out = {}
+    for board, popularity in board_cond.items():
+        out[board] = ds.main(board, popularity)
+    return out
 # %%
