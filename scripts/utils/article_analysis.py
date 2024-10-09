@@ -8,6 +8,7 @@ import chromadb
 from chromadb.config import Settings
 from dotenv import load_dotenv
 load_dotenv('../../.env')
+# load_dotenv()
 import os
 import pandas as pd
 from utils import database
